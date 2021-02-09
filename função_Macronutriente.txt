@@ -1,0 +1,32 @@
+CREATE OR REPLACE FUNCTION macronutriente () 
+RETURNS BOOLEAN
+AS
+' 
+	DECLARE
+	nome_alim_gord Alimento.nome%TYPE;
+	nome_alim_prot Alimento.nome%TYPE;
+	nome_alim_carb Alimento.nome%TYPE;
+	qtd INTEGER;
+	
+	BEGIN
+	qtd := 0;
+	FOR nome_alim_gord IN SELECT nome FROM Alimento WHERE gordura > proteina AND gordura > carboidrato LOOP
+	qtd :=qtd + 1;
+	RAISE NOTICE ''Alimento com  Macronutriente (Gordura): %'', nome_alim_gord;
+	END LOOP;
+	
+	FOR nome_alim_prot IN SELECT nome FROM Alimento WHERE proteina > gordura AND proteina > carboidrato LOOP
+	qtd :=qtd + 1;
+	RAISE NOTICE ''Alimento com macronutriente (Proteina): %'', nome_alim_prot;
+	END LOOP;
+	
+	FOR nome_alim_carb IN SELECT nome FROM Alimento WHERE carboidrato > proteina AND carboidrato > gordura LOOP
+	qtd := qtd + 1;
+	RAISE NOTICE ''Alimento com Macronutriente (Carboidrato): %'', nome_alim_carb;
+	END LOOP;
+	
+	RETURN ''t'';
+	
+END; 
+'
+LANGUAGE 'plpgsql';

@@ -1,0 +1,37 @@
+CREATE OR REPLACE FUNCTION soma_calorias (Internacao.cpf%TYPE)
+RETURNS NUMERIC
+AS
+'
+	DECLARE
+	cpf1 ALIAS FOR $1;
+	soma_cal Alimento.caloria%TYPE;
+	
+	BEGIN
+	SELECT INTO soma_cal SUM(caloria)
+	FROM Alimento
+	WHERE cod_alim IN
+		(
+		SELECT cod_alim
+		FROM Cardapio_Alimento
+		WHERE cod_card IN
+			(
+			SELECT cod_card
+			FROM Dieta_Cardapio
+			WHERE cod_dieta IN
+				(
+				SELECT cod_dieta
+				FROM Internacao_Dieta
+				WHERE cpf IN
+					(
+					SELECT cpf
+					FROM Internacao
+					WHERE Internacao.cpf = cpf1
+					)
+				)
+			)
+		);
+	RETURN soma_cal;
+	
+	END;
+'
+LANGUAGE 'plpgsql';

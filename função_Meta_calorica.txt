@@ -1,0 +1,51 @@
+CREATE OR REPLACE FUNCTION meta_calorica ()
+RETURNS TRIGGER
+AS
+'
+	DECLARE
+		caloria_alim Alimento.caloria%TYPE;
+		meta_calorica_paci Internacao.meta_cal_dia%TYPE;
+		caloria_restam Alimento.caloria%TYPE;
+		
+	
+	
+	BEGIN
+		SELECT INTO caloria_alim SUM(caloria)
+		FROM Alimento
+		WHERE cod_alim IN
+			(SELECT cod_alim 
+			FROM Cardapio_Alimento
+			WHERE cod_card IN
+				(SELECT cod_card
+				FROM Dieta_Cardapio, Internacao_Dieta
+				WHERE Dieta_Cardapio.cod_dieta = Internacao_Dieta.cod_dieta AND Internacao_Dieta.cod_dieta = NEW.cod_dieta)
+			);
+		
+		SELECT INTO meta_calorica_paci meta_cal_dia
+		FROM Internacao 
+		WHERE cpf IN
+			(SELECT cpf
+			FROM Internacao_Dieta
+			WHERE cod_dieta = NEW.cod_dieta);
+			
+		caloria_restam := meta_calorica_paci - caloria_alim;
+		IF caloria_restam > 0 THEN
+		RAISE NOTICE ''Calorias que restam para atingir a Meta Calórica Diária: %'', caloria_restam;
+		
+		ELSE
+			RAISE NOTICE '' Calorias já foram atingidas'';
+			
+		
+		END IF;
+		
+		
+		RETURN NEW;
+	
+END; 
+'
+
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER tg_meta_calorica
+AFTER INSERT ON Internacao_Dieta FOR EACH ROW
+EXECUTE PROCEDURE meta_calorica ();

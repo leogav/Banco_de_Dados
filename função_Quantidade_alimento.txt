@@ -1,0 +1,24 @@
+CREATE FUNCTION quantidade_alimento ()
+RETURNS TRIGGER
+AS
+'
+	DECLARE 
+		quant_alim Cardapio_Alimento.quantidade%TYPE;
+		
+	BEGIN
+		SELECT INTO quant_alim SUM(quantidade)
+		FROM Cardapio_Alimento
+		WHERE cod_alim = NEW.cod_alim;
+		
+		RAISE NOTICE ''Quantidade de Alimento: %'', quant_alim;
+	
+	RETURN NEW;
+	
+END; 
+'
+
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER tg_quantidade_alimento
+AFTER INSERT ON Cardapio_Alimento FOR EACH ROW
+EXECUTE PROCEDURE quantidade_alimento ();

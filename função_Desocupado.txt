@@ -1,0 +1,82 @@
+--criar função "nutricionistas_menos_ocupados"
+CREATE FUNCTION nutricionistas_menos_ocupados () RETURNS TRIGGER AS 
+'  
+DECLARE 
+	--menor_numero_pacientes: Variavel para armazenar o menor numero de atendimentos 
+	menor_numero_pacientes NUMERIC;
+
+	--nutris_pacientes: Cursor para armazenar o result set das contagem dos pacientes atendidos pelas nutricionista
+	nutris_pacientes CURSOR FOR 
+		SELECT
+    		cod_usuario,
+    		nome,
+    		COUNT(nutricionista_paciente.cpf) AS nro_pacientes 
+		FROM
+    		profissional 
+    		LEFT JOIN
+        		nutricionista_paciente 
+        		ON profissional.cod_usuario = nutricionista_paciente.cod_usuario_nutri 
+		WHERE
+    		profissional.tipo = ''nutricionista'' 
+		GROUP BY
+			(profissional.cod_usuario) 
+		ORDER BY
+			(COUNT(nutricionista_paciente.cpf)) ASC;
+
+	--registro_nutricionista: Variavel para guardar os registros recuperados a partir do do cursor 
+	registro_nutricionista RECORD;
+
+
+BEGIN
+    --Passo 1) Encontrar o menor numero de atendimentos
+    SELECT
+        INTO menor_numero_pacientes MIN(nro_pacientes) 
+    FROM
+        (
+            SELECT
+                COUNT(nutricionista_paciente.cpf) AS nro_pacientes 
+            FROM
+                profissional 
+                LEFT JOIN
+                    nutricionista_paciente 
+                    ON profissional.cod_usuario = nutricionista_paciente.cod_usuario_nutri 
+            WHERE
+                profissional.tipo = ''nutricionista'' 
+            GROUP BY
+				(profissional.cod_usuario)
+        )
+        AS contagem_pacientes;
+
+	--Passo 2) Percorrer os registros do cursor para revelar a(s) nutricionista(s) com menor(es) numero(s) de atendimentos
+	OPEN nutris_pacientes ;
+		FETCH nutris_pacientes INTO registro_nutricionista;
+		RAISE NOTICE ''Nutricionista(s) menos ocupado(s)'';
+
+	--Passo 3) Percorer o cursor e se o numero de atendimentos for igual ao numero mínimo de atendimentos, exiba o nome da nutricionista
+		WHILE FOUND LOOP 
+			IF registro_nutricionista.nro_pacientes = menor_numero_pacientes THEN
+    			RAISE NOTICE ''NOME: % '', registro_nutricionista.nome;
+			END IF;
+			FETCH nutris_pacientes INTO registro_nutricionista;
+		END LOOP;
+	CLOSE nutris_pacientes ;
+
+	--Passo 4) Fim da Função, retorna true
+	RETURN NULL;
+END;
+'
+LANGUAGE 'plpgsql';
+
+
+--create triggger "trigger_nutricionistas_menos_ocupados"
+CREATE TRIGGER trigger_nutricionistas_menos_ocupados 
+	AFTER INSERT ON Paciente FOR EACH ROW 
+	EXECUTE PROCEDURE nutricionistas_menos_ocupados();
+
+--testar o trigger
+INSERT INTO paciente (cpf,nome,sexo,data_nasc,rua,bairro,numero,cep) VALUES ('13782542010','Juliana de Oliveira','02','2002.12.02','nove de Julho','Vila Olimpus','222','15021040');
+DELETE FROM paciente where cpf = '13782542010';
+
+	
+	
+
